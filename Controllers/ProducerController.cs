@@ -45,6 +45,35 @@ namespace PlamoClubApi.Controllers
       return producer;
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutProducer(Guid id, Producer producer)
+    {
+      if (id != producer.Id)
+      {
+        return BadRequest();
+      }
+
+      _context.Entry(producer).State = EntityState.Modified;
+
+      try
+      {
+        await _context.SaveChangesAsync();
+      }
+      catch (DbUpdateConcurrencyException)
+      {
+        if (!ProducerExists(id))
+        {
+          return NotFound();
+        }
+        else
+        {
+          throw;
+        }
+      }
+
+      return NoContent();
+    }
+
     [HttpPost]
     public async Task<ActionResult<Producer>> PostProducer(Producer producer)
     {
@@ -56,6 +85,41 @@ namespace PlamoClubApi.Controllers
       await _context.SaveChangesAsync();
 
       return CreatedAtAction(nameof(GetProducer), new { id = producer.Id }, producer);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteProducer(Guid id)
+    {
+      if (_context.Producers == null)
+      {
+        return NotFound();
+      }
+
+      var producer = await _context.Producers.FindAsync(id);
+
+      if (producer == null)
+      {
+        return NotFound();
+      }
+
+      var hasModelKits = await _context.ModelKits.AnyAsync(modelKit => modelKit.ProducerId == id);
+
+      if (!hasModelKits)
+      {
+        _context.Producers.Remove(producer);
+        await _context.SaveChangesAsync();
+      }
+      else
+      {
+        return BadRequest();
+      }
+
+      return NoContent();
+    }
+
+    private bool ProducerExists(Guid id)
+    {
+      return (_context.Producers?.Any(e => e.Id == id)).GetValueOrDefault();
     }
   }
 }
